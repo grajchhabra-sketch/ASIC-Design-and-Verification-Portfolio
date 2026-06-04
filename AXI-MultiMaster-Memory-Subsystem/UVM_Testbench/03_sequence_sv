@@ -1,0 +1,34 @@
+
+class axi_sequence extends uvm_sequence #(axi_txn);
+
+  `uvm_object_utils(axi_sequence)
+
+  function new(string name="axi_sequence");
+    super.new(name);
+  endfunction
+
+  task body();
+
+    axi_txn tx;
+
+    repeat(100)
+    begin
+
+      tx = axi_txn::type_id::create("tx");
+
+      start_item(tx);
+
+      assert(tx.randomize() with {
+        write dist {1:=50,0:=50};
+
+        addr inside {[32'h1000:32'h10FF]};
+      });
+
+      finish_item(tx);
+
+    end
+
+  endtask
+
+endclass
+
