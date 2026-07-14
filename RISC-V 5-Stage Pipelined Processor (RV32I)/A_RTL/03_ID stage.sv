@@ -24,6 +24,14 @@ module register_file(input clk, input [4:0]rs1, input [4:0]rs2, input reg_write,
       if(reg_write && rd!=0)
         regs[rd]<=write_data;
     end
+  
+  property p_no_write_x0;
+  @(posedge clk) disable iff(1'b0)
+    !(reg_write && rd == 5'd0);
+endproperty
+assert property(p_no_write_x0)
+  else $error("Illegal write attempted to x0");
+  
 endmodule
 
 //immediate generator
@@ -77,9 +85,12 @@ module immediate_generator(input [31:0]instruction, output reg [31:0]imm_out);
     end
 endmodule
 
+
 module control_unit(
     input [6:0] opcode,
-
+    input [4:0] rd,
+    input [4:0] rs1,
+    input [11:0] imm11_0,   // instruction[31:20], needed to detect addi x0,x0,0
     output reg        reg_write,
     output reg        alu_src,
     output reg        mem_read,
@@ -89,9 +100,7 @@ module control_unit(
     output reg        jump,
     output reg  [1:0] alu_op
 );
-
     always @(*) begin
-
         reg_write  = 1'b0;
         alu_src    = 1'b0;
         mem_read   = 1'b0;
@@ -100,23 +109,23 @@ module control_unit(
         branch     = 1'b0;
         jump       = 1'b0;
         alu_op     = 2'b00;
-
         case(opcode)
-
             // R-type
             7'b0110011: begin
                 reg_write = 1'b1;
                 alu_src   = 1'b0;
                 alu_op    = 2'b10;
             end
-
             // I-type arithmetic
             7'b0010011: begin
-                reg_write = 1'b1;
                 alu_src   = 1'b1;
                 alu_op    = 2'b10;
+                // NOP = addi x0, x0, 0 (encoding 00000013) must not write
+                if (rd == 5'd0 && rs1 == 5'd0 && imm11_0 == 12'd0)
+                    reg_write = 1'b0;
+                else
+                    reg_write = 1'b1;
             end
-
             // Load
             7'b0000011: begin
                 reg_write  = 1'b1;
@@ -125,51 +134,41 @@ module control_unit(
                 mem_to_reg = 1'b1;
                 alu_op     = 2'b00;
             end
-
             // Store
             7'b0100011: begin
                 alu_src   = 1'b1;
                 mem_write = 1'b1;
                 alu_op    = 2'b00;
             end
-
             // Branch
             7'b1100011: begin
                 branch = 1'b1;
                 alu_op = 2'b01;
             end
-
             // JAL
             7'b1101111: begin
                 jump      = 1'b1;
                 reg_write = 1'b1;
                 alu_op    = 2'b00;
             end
-
             // JALR
             7'b1100111: begin
                 jump      = 1'b1;
                 reg_write = 1'b1;
                 alu_src   = 1'b1;
-                alu_op    = 2'b00;  
+                alu_op    = 2'b00;
             end
-
             7'b0110111: begin
                 reg_write = 1'b1;
                 alu_src   = 1'b1;
                 alu_op    = 2'b11;
             end
-
-            
             7'b0010111: begin
                 reg_write = 1'b1;
                 alu_src   = 1'b1;
                 alu_op    = 2'b10;
             end
-
-           
             7'b0001111: begin end
-
             default: begin
                 reg_write  = 1'b0;
                 alu_src    = 1'b0;
@@ -180,8 +179,6 @@ module control_unit(
                 jump       = 1'b0;
                 alu_op     = 2'b00;
             end
-
         endcase
     end
-
 endmodule
