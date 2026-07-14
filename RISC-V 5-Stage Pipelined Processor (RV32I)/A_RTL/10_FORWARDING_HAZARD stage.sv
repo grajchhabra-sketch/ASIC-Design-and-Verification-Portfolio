@@ -1,3 +1,4 @@
+
 //forwarding
 module forwarding_unit(
 
@@ -79,9 +80,10 @@ module hazard_detection_unit(
 always @(*)
 begin
 
-    if(id_ex_mem_read &&
-      ((id_ex_rd == if_id_rs1) ||
-       (id_ex_rd == if_id_rs2)))
+    if (id_ex_mem_read &&
+    (id_ex_rd != 5'd0) &&
+    ((id_ex_rd == if_id_rs1) ||
+     (id_ex_rd == if_id_rs2)))
     begin
 
         stall      = 1'b1;
@@ -100,6 +102,8 @@ begin
     end
 
 end
+  
+ 
 
 endmodule
 
@@ -114,6 +118,7 @@ module flush_unit(
 );
 
 assign flush = branch_taken | jump;
+
 
 endmodule
 
@@ -188,3 +193,4 @@ begin
 end
 
 endmodule
+
