@@ -1,4 +1,4 @@
-module bank_state
+module bank_state 
 #(
     parameter NUM_BANKS  = 8,
     parameter BANK_WIDTH = 3,
